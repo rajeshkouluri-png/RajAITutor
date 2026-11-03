@@ -1,0 +1,201 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Raj AI Classroom Tutor</title>
+    <style>
+      body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #e5ddd5; margin: 0; padding: 10px; display: flex; flex-direction: column; height: 95vh; }
+      #header { text-align: center; background-color: #075e54; color: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; font-size: 20px; font-weight: bold; }
+      #chat-box { flex: 1; overflow-y: auto; background: #ece5dd; padding: 15px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 10px; display: flex; flex-direction: column; }
+      
+      .msg { margin-bottom: 15px; padding: 12px 16px; border-radius: 15px; max-width: 85%; font-size: 16px; line-height: 1.5; word-wrap: break-word; }
+      .user-msg { background-color: #dcf8c6; align-self: flex-end; border-bottom-right-radius: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.15); }
+      .bot-msg { background-color: #ffffff; align-self: flex-start; border-bottom-left-radius: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.15); white-space: pre-wrap; }
+      
+      /* --- NEW QUIZ STYLES --- */
+      .quiz-option { display: block; padding: 12px; margin-bottom: 8px; background-color: #f0f2f5; border-radius: 8px; border: 1px solid #d1d7db; font-size: 15px; cursor: pointer; }
+      .quiz-option input { margin-right: 12px; transform: scale(1.3); }
+      .quiz-btn { width: 100%; background-color: #128c7e; color: white; padding: 15px; border: none; border-radius: 25px; font-size: 16px; font-weight: bold; margin-top: 15px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+      .quiz-btn:active { background-color: #075e54; }
+      
+      #controls-area { display: flex; flex-direction: column; gap: 8px; }
+      .dropdown-row { display: flex; flex-wrap: wrap; gap: 8px; }
+      .input-row { display: flex; gap: 8px; }
+      select { flex: 1; min-width: 90px; padding: 12px 5px; border-radius: 20px; border: none; font-size: 14px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); outline: none; background: white; font-weight: bold; color: #075e54; text-align: center; }
+      #mode-select { background-color: #fff3cd; color: #856404; } 
+      input[type="text"] { flex: 1; padding: 15px; border-radius: 25px; border: none; font-size: 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); outline: none; }
+      button.send-btn { padding: 15px 25px; background-color: #128c7e; color: white; border: none; border-radius: 25px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    </style>
+  </head>
+  <body>
+    <div id="header">Raj AI Classroom Tutor 🎓</div>
+    <div id="chat-box">
+       <div class="msg bot-msg">Welcome to Raj AI Classroom! Select your Class, Subject, and Mode below.</div>
+    </div>
+    
+    <div id="controls-area">
+      <div class="dropdown-row">
+        <select id="class-select" onchange="clearMemory()">
+          <option value="4">Class 4</option>
+          <option value="5" selected>Class 5</option>
+        </select>
+        <select id="subject-select" onchange="clearMemory()">
+          <option value="MATHS" selected>Maths</option>
+          <option value="ENGLISH">English</option>
+          <option value="TELUGU">Telugu</option>
+          <option value="EVS">EVS</option>
+        </select>
+        <select id="mode-select" onchange="clearMemory()">
+          <option value="LEARN" selected>📖 Learn & Ask</option>
+          <option value="QUIZ">✍️ Take a Quiz</option>
+        </select>
+      </div>
+      <div class="input-row">
+        <input type="text" id="user-input" placeholder="Type here..." onkeypress="handleEnter(event)">
+        <button class="send-btn" onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+
+    <script>
+      // ==========================================
+      // PASTE YOUR NEW GOOGLE WEB APP URL HERE:
+      // ==========================================
+      const GOOGLE_API_URL = "https://script.google.com/macros/s/AKfycbx4OX4izRW7FL1XSkbPUfpPP0OIFlCiFSoS6mphKFLi7H_shUkcQRWXtPlmg5DKo1Wj/exec"; 
+
+      var chatMemory = ""; 
+      window.currentQuiz = []; // Stores the quiz data secretly
+
+      function clearMemory() { chatMemory = ""; }
+      function handleEnter(e) { if(e.key === 'Enter') sendMessage(); }
+      
+      function sendMessage() {
+        var input = document.getElementById('user-input');
+        var text = input.value.trim();
+        if(!text) return;
+        
+        var studentClass = document.getElementById('class-select').value;
+        var studentSubject = document.getElementById('subject-select').value;
+        var studentMode = document.getElementById('mode-select').value;
+        
+        addMessage(text, 'user-msg');
+        input.value = '';
+        chatMemory += "Student: " + text + "\n";
+        var loadingId = addMessage("Thinking... ⏳", 'bot-msg');
+        
+        fetch(GOOGLE_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            message: text,
+            studentClass: studentClass,
+            studentSubject: studentSubject,
+            studentMode: studentMode,
+            chatMemory: chatMemory
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          // MAGIC TRICK: Check if the bot sent a JSON Quiz Form
+          try {
+             var quizJson = JSON.parse(data.answer);
+             if (Array.isArray(quizJson)) {
+                 renderQuiz(loadingId, quizJson);
+                 return; // Stop here, don't print normal text
+             }
+          } catch(e) {
+             // Not a quiz, just continue to normal text printing below
+          }
+          
+          chatMemory += "Tutor: " + data.answer + "\n";
+          document.getElementById(loadingId).innerText = data.answer;
+        })
+        .catch(error => {
+          document.getElementById(loadingId).innerText = "Connection error. Please try again.";
+        });
+      }
+
+      function addMessage(text, className) {
+        var chatBox = document.getElementById('chat-box');
+        var div = document.createElement('div');
+        div.className = 'msg ' + className;
+        div.innerText = text;
+        div.id = 'msg-' + Date.now();
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        return div.id;
+      }
+
+      // ==========================================
+      // NEW QUIZ BUILDER & GRADER
+      // ==========================================
+      function renderQuiz(elementId, quizData) {
+        window.currentQuiz = quizData;
+        var container = document.getElementById(elementId);
+        container.style.whiteSpace = 'normal'; // Fix text wrapping
+        
+        var html = "<div style='font-size: 18px; font-weight: bold; margin-bottom: 15px;'>📝 Quiz Time!</div>";
+        
+        quizData.forEach((q, i) => {
+            html += "<div style='margin-bottom: 25px;'>";
+            html += "<div style='font-weight: bold; margin-bottom: 10px;'>" + (i+1) + ". " + q.q + "</div>";
+            
+            q.opt.forEach((optionText, j) => {
+                html += `<label class="quiz-option">
+                           <input type="radio" name="q${i}" value="${j}">
+                           ${optionText}
+                         </label>`;
+            });
+            
+            html += `<div id="exp-${i}" style="display:none; margin-top:10px; padding:10px; border-radius:8px; font-size:14px;"></div>`;
+            html += "</div>";
+        });
+        
+        html += `<button class="quiz-btn" id="submit-btn-${elementId}" onclick="submitQuiz('${elementId}')">Submit Answers</button>`;
+        container.innerHTML = html;
+        container.parentElement.scrollTop = container.parentElement.scrollHeight;
+      }
+
+      function submitQuiz(elementId) {
+        var allAnswered = true;
+
+        // Check if student missed any questions
+        window.currentQuiz.forEach((q, i) => {
+            var selected = document.querySelector(`input[name="q${i}"]:checked`);
+            if (!selected) allAnswered = false;
+        });
+
+        if (!allAnswered) {
+            alert("Please answer all 5 questions before submitting! (దయచేసి అన్ని ప్రశ్నలకు సమాధానం ఇవ్వండి)");
+            return;
+        }
+
+        // Grade the test instantly!
+        var score = 0;
+        window.currentQuiz.forEach((q, i) => {
+            var selected = document.querySelector(`input[name="q${i}"]:checked`);
+            var expDiv = document.getElementById(`exp-${i}`);
+            var selectedVal = parseInt(selected.value);
+            
+            if (selectedVal === q.ans) {
+                score++;
+                expDiv.innerHTML = "✅ <b>Correct! (సరైనది!)</b><br>" + q.exp;
+                expDiv.style.backgroundColor = "#d4edda";
+                expDiv.style.color = "#155724";
+            } else {
+                expDiv.innerHTML = "❌ <b>Wrong (తప్పు).</b> Correct Answer: " + q.opt[q.ans] + "<br><br>" + q.exp;
+                expDiv.style.backgroundColor = "#f8d7da";
+                expDiv.style.color = "#721c24";
+            }
+            expDiv.style.display = "block";
+        });
+        
+        // Lock the answers so they can't change them
+        document.querySelectorAll(`#${elementId} input[type="radio"]`).forEach(r => r.disabled = true);
+        document.getElementById(`submit-btn-${elementId}`).style.display = 'none';
+        
+        // Reset the brain for the next topic
+        clearMemory();
+      }
+    </script>
+  </body>
+</html>
