@@ -59,9 +59,20 @@
           <option value="TELUGU">Telugu</option>
           <option value="EVS">EVS</option>
         </select>
+        <select id="lesson-select" onchange="clearMemory()">
+          <option value="LESSON_1" selected>Lesson 1</option>
+          <option value="LESSON_2">Lesson 2</option>
+          <option value="LESSON_3">Lesson 3</option>
+          <option value="LESSON_4">Lesson 4</option>
+          <option value="LESSON_5">Lesson 5</option>
+          <option value="LESSON_6">Lesson 6</option>
+          <option value="LESSON_7">Lesson 7</option>
+          <option value="LESSON_8">Lesson 8</option>
+        </select>
         <select id="mode-select" onchange="clearMemory()">
           <option value="LEARN" selected>📖 Learn & Ask</option>
           <option value="QUIZ">✍️ Take a Quiz</option>
+          <option value="HOMEWORK">📝 Home Work</option>
         </select>
       </div>
       <div class="input-row">
@@ -74,7 +85,7 @@
       // ==========================================
       // PASTE YOUR GOOGLE WEB APP URL HERE:
       // ==========================================
-      const GOOGLE_API_URL = "https://script.google.com/macros/s/AKfycbwY83Wqo41qIS93V1FIK5SZezISxXCG9q-U2aSDGGef_Q6HysCSTS-OeUqxMpX14DAy/exec"; 
+      const GOOGLE_API_URL = "https://script.google.com/macros/s/AKfycbx1YdzozsSe5Qc7bFZUr4GdnHK_1g3n2GUH5uXOvxat0_ramUEni-NJhpnGbZR5Oc4O/exec"; 
 
       var chatMemory = ""; 
       window.currentQuiz = [];
@@ -94,6 +105,7 @@
         
         var studentClass = document.getElementById('class-select').value;
         var studentSubject = document.getElementById('subject-select').value;
+        var studentLesson = document.getElementById('lesson-select').value;
         var studentMode = document.getElementById('mode-select').value;
         
         addMessage(text, 'user-msg');
@@ -108,6 +120,7 @@
             message: text,
             studentClass: studentClass,
             studentSubject: studentSubject,
+            studentLesson: studentLesson,
             studentMode: studentMode,
             chatMemory: chatMemory
           })
