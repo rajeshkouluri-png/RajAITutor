@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -12,6 +12,20 @@
       .user-msg { background-color: #dcf8c6; align-self: flex-end; border-bottom-right-radius: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.15); }
       .bot-msg { background-color: #ffffff; align-self: flex-start; border-bottom-left-radius: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.15); white-space: pre-wrap; }
       
+      /* --- MAGICAL COLORED LABELS --- */
+      .highlight-label {
+        background-color: #d1e7dd;
+        color: #0f5132;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-weight: bold;
+        display: inline-block;
+        margin-top: 6px;
+        margin-bottom: 4px;
+        border: 1px solid #badbcc;
+        font-size: 15px;
+      }
+
       /* --- NEW QUIZ STYLES --- */
       .quiz-option { display: block; padding: 12px; margin-bottom: 8px; background-color: #f0f2f5; border-radius: 8px; border: 1px solid #d1d7db; font-size: 15px; cursor: pointer; }
       .quiz-option input { margin-right: 12px; transform: scale(1.3); }
@@ -58,15 +72,20 @@
 
     <script>
       // ==========================================
-      // PASTE YOUR NEW GOOGLE WEB APP URL HERE:
+      // PASTE YOUR GOOGLE WEB APP URL HERE:
       // ==========================================
-      const GOOGLE_API_URL = "https://script.google.com/macros/s/AKfycbyW28V3H3H5_CKsVD7Ye2fHoHFczkAIJpTMmztvklaCtlCWqEex1rXZOgQq7sRMgSSZ/exec"; 
+      const GOOGLE_API_URL = "https://script.google.com/macros/s/AKfycbwY83Wqo41qIS93V1FIK5SZezISxXCG9q-U2aSDGGef_Q6HysCSTS-OeUqxMpX14DAy/exec"; 
 
       var chatMemory = ""; 
-      window.currentQuiz = []; // Stores the quiz data secretly
+      window.currentQuiz = [];
 
       function clearMemory() { chatMemory = ""; }
       function handleEnter(e) { if(e.key === 'Enter') sendMessage(); }
+      
+      // Magic trick function: Converts **Text** into beautiful HTML labels
+      function formatText(text) {
+        return text.replace(/\*\*(.*?)\*\*/g, '<span class="highlight-label">$1</span>');
+      }
       
       function sendMessage() {
         var input = document.getElementById('user-input');
@@ -95,19 +114,17 @@
         })
         .then(response => response.json())
         .then(data => {
-          // MAGIC TRICK: Check if the bot sent a JSON Quiz Form
           try {
              var quizJson = JSON.parse(data.answer);
              if (Array.isArray(quizJson)) {
                  renderQuiz(loadingId, quizJson);
-                 return; // Stop here, don't print normal text
+                 return; 
              }
-          } catch(e) {
-             // Not a quiz, just continue to normal text printing below
-          }
+          } catch(e) {}
           
           chatMemory += "Tutor: " + data.answer + "\n";
-          document.getElementById(loadingId).innerText = data.answer;
+          // Replaces the text and applies the magic format trick
+          document.getElementById(loadingId).innerHTML = formatText(data.answer);
         })
         .catch(error => {
           document.getElementById(loadingId).innerText = "Connection error. Please try again.";
@@ -118,20 +135,17 @@
         var chatBox = document.getElementById('chat-box');
         var div = document.createElement('div');
         div.className = 'msg ' + className;
-        div.innerText = text;
+        div.innerHTML = formatText(text); // Apply magic format trick
         div.id = 'msg-' + Date.now();
         chatBox.appendChild(div);
         chatBox.scrollTop = chatBox.scrollHeight;
         return div.id;
       }
 
-      // ==========================================
-      // NEW QUIZ BUILDER & GRADER
-      // ==========================================
       function renderQuiz(elementId, quizData) {
         window.currentQuiz = quizData;
         var container = document.getElementById(elementId);
-        container.style.whiteSpace = 'normal'; // Fix text wrapping
+        container.style.whiteSpace = 'normal'; 
         
         var html = "<div style='font-size: 18px; font-weight: bold; margin-bottom: 15px;'>📝 Quiz Time!</div>";
         
@@ -158,18 +172,16 @@
       function submitQuiz(elementId) {
         var allAnswered = true;
 
-        // Check if student missed any questions
         window.currentQuiz.forEach((q, i) => {
             var selected = document.querySelector(`input[name="q${i}"]:checked`);
             if (!selected) allAnswered = false;
         });
 
         if (!allAnswered) {
-            alert("Please answer all 10 questions before submitting! (దయచేసి అన్ని ప్రశ్నలకు సమాధానం ఇవ్వండి)");
+            alert("Please answer all 10 questions before submitting! (దయచేసి అన్ని 10 ప్రశ్నలకు సమాధానం ఇవ్వండి)");
             return;
         }
 
-        // Grade the test instantly!
         var score = 0;
         window.currentQuiz.forEach((q, i) => {
             var selected = document.querySelector(`input[name="q${i}"]:checked`);
@@ -178,22 +190,19 @@
             
             if (selectedVal === q.ans) {
                 score++;
-                expDiv.innerHTML = "✅ <b>Correct! (సరైనది!)</b><br>" + q.exp;
+                expDiv.innerHTML = "✅ <b>Correct! (సరైనది!)</b><br>" + formatText(q.exp); // Apply formatting to quiz answers too!
                 expDiv.style.backgroundColor = "#d4edda";
                 expDiv.style.color = "#155724";
             } else {
-                expDiv.innerHTML = "❌ <b>Wrong (తప్పు).</b> Correct Answer: " + q.opt[q.ans] + "<br><br>" + q.exp;
+                expDiv.innerHTML = "❌ <b>Wrong (తప్పు).</b> Correct Answer: " + q.opt[q.ans] + "<br><br>" + formatText(q.exp);
                 expDiv.style.backgroundColor = "#f8d7da";
                 expDiv.style.color = "#721c24";
             }
             expDiv.style.display = "block";
         });
         
-        // Lock the answers so they can't change them
         document.querySelectorAll(`#${elementId} input[type="radio"]`).forEach(r => r.disabled = true);
         document.getElementById(`submit-btn-${elementId}`).style.display = 'none';
-        
-        // Reset the brain for the next topic
         clearMemory();
       }
     </script>
