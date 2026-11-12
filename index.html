@@ -53,24 +53,15 @@
           <option value="4">Class 4</option>
           <option value="5" selected>Class 5</option>
         </select>
-        <select id="subject-select" onchange="clearMemory()">
+        <!-- Added updateLessons() to automatically adjust the lesson count -->
+        <select id="subject-select" onchange="clearMemory(); updateLessons();">
           <option value="MATHS" selected>Maths</option>
           <option value="ENGLISH">English</option>
           <option value="TELUGU">Telugu</option>
           <option value="EVS">EVS</option>
         </select>
         <select id="lesson-select" onchange="clearMemory()">
-          <option value="LESSON_1" selected>Lesson 1</option>
-          <option value="LESSON_2">Lesson 2</option>
-          <option value="LESSON_3">Lesson 3</option>
-          <option value="LESSON_4">Lesson 4</option>
-          <option value="LESSON_5">Lesson 5</option>
-          <option value="LESSON_6">Lesson 6</option>
-          <option value="LESSON_7">Lesson 7</option>
-          <option value="LESSON_8">Lesson 8</option>
-          <option value="LESSON_9">Lesson 9</option>
-          <option value="LESSON_10">Lesson 10</option>
-          <option value="LESSON_11">Lesson 11</option>
+          <!-- This will be filled dynamically by JavaScript -->
         </select>
         <select id="mode-select" onchange="clearMemory()">
           <option value="LEARN" selected>📖 Learn & Ask</option>
@@ -92,6 +83,40 @@
 
       var chatMemory = ""; 
       window.currentQuiz = [];
+
+      // DYNAMIC LESSON DROPDOWN LOGIC
+      const subjectLessonCounts = {
+        "MATHS": 9,
+        "ENGLISH": 8,
+        "TELUGU": 10,
+        "EVS": 11
+      };
+
+      function updateLessons() {
+        var subject = document.getElementById('subject-select').value;
+        var maxLessons = subjectLessonCounts[subject];
+        var lessonSelect = document.getElementById('lesson-select');
+        var currentlySelected = lessonSelect.value; // Remember what they clicked
+
+        lessonSelect.innerHTML = ""; // Clear out the old list
+
+        // Build the new list based on the exact subject count
+        for (var i = 1; i <= maxLessons; i++) {
+          var option = document.createElement('option');
+          option.value = "LESSON_" + i;
+          option.text = "Lesson " + i;
+          
+          // Try to keep their current lesson selected if it exists in the new subject
+          if ("LESSON_" + i === currentlySelected) {
+            option.selected = true;
+          }
+          
+          lessonSelect.appendChild(option);
+        }
+      }
+      
+      // Run this once right when the page loads so Maths gets its 9 lessons immediately
+      updateLessons(); 
 
       function clearMemory() { chatMemory = ""; }
       function handleEnter(e) { if(e.key === 'Enter') sendMessage(); }
