@@ -64,14 +64,16 @@
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         color: #111111;
         background: #ffffff;
-        padding: 18px;
+        padding: 6px;
         line-height: 1.55;
+        width: 100%;
+        box-sizing: border-box;
       }
       .pdf-header-box {
         border: 2px solid #075e54;
         border-radius: 8px;
-        padding: 14px;
-        margin-bottom: 18px;
+        padding: 12px;
+        margin-bottom: 16px;
         background-color: #f4fbf9;
       }
       .pdf-app-title {
@@ -85,13 +87,13 @@
       }
       .pdf-doc-type {
         text-align: center;
-        font-size: 16px;
+        font-size: 15px;
         font-weight: bold;
         color: #ffffff;
         background-color: #075e54;
         padding: 5px 12px;
         border-radius: 5px;
-        margin: 6px auto 12px auto;
+        margin: 6px auto 10px auto;
         width: fit-content;
       }
       .pdf-meta-table {
@@ -112,7 +114,7 @@
         color: #333333;
       }
       .pdf-body {
-        font-size: 14.5px;
+        font-size: 14px;
         white-space: pre-wrap;
       }
       .pdf-q-block {
@@ -130,15 +132,6 @@
         gap: 4px 14px;
         padding-left: 14px;
         font-size: 13.5px;
-      }
-      .pdf-footer {
-        margin-top: 24px;
-        padding-top: 10px;
-        border-top: 2px solid #075e54;
-        text-align: center;
-        font-size: 12.5px;
-        font-weight: bold;
-        color: #075e54;
       }
     </style>
   </head>
@@ -179,13 +172,12 @@
       // ==========================================
       // PASTE YOUR GOOGLE WEB APP URL HERE:
       // ==========================================
-      const GOOGLE_API_URL = "https://script.google.com/macros/s/AKfycby1Av7POZtYxZQm-2INQcaQDiB_IZQ6fqj-6kUTej3h2NPxS1ENCBim6-4GwmyKXWE/exec"; 
+      const GOOGLE_API_URL = "https://script.google.com/macros/s/AKfycbwvf4-voamOlJnSyBI3rqX4ZzSOy6K1VA33pZY0rSjSO6DQhG4ShKNDFT0P_Ke4ptnd/exec"; 
 
       var chatMemory = ""; 
       window.currentQuiz = [];
-      window.exportStore = {}; // Stores metadata & content for each PDF download button
+      window.exportStore = {};
 
-      // DYNAMIC LESSON DROPDOWN LOGIC
       const subjectLessonCounts = {
         "MATHS": 9,
         "ENGLISH": 8,
@@ -242,7 +234,9 @@
         
         addMessage(text, 'user-msg');
         input.value = '';
-        chatMemory += "Student: " + text + "\n";
+        if (studentMode === "LEARN") {
+          chatMemory += "Student: " + text + "\n";
+        }
         var loadingId = addMessage("Thinking... ⏳", 'bot-msg');
         
         fetch(GOOGLE_API_URL, {
@@ -269,21 +263,25 @@
             topic: pdfLessonTitle
           };
 
-          try {
-             var quizJson = JSON.parse(data.answer);
-             if (Array.isArray(quizJson)) {
-                 window.exportStore[loadingId] = Object.assign({ type: "QUIZ", quizData: quizJson }, metaInfo);
-                 renderQuiz(loadingId, quizJson);
-                 return; 
-             }
-          } catch(e) {}
+          if (!data.isError) {
+            try {
+               var quizJson = JSON.parse(data.answer);
+               if (Array.isArray(quizJson)) {
+                   window.exportStore[loadingId] = Object.assign({ type: "QUIZ", quizData: quizJson }, metaInfo);
+                   renderQuiz(loadingId, quizJson);
+                   return; 
+               }
+            } catch(e) {}
+          }
           
-          chatMemory += "Tutor: " + data.answer + "\n";
+          if (studentMode === "LEARN" && !data.isError) {
+            chatMemory += "Tutor: " + data.answer + "\n";
+          }
+
           var msgDiv = document.getElementById(loadingId);
           msgDiv.innerHTML = formatText(data.answer);
 
-          // Only show PDF download button in Home Work mode when valid content is returned
-          var isErrorMsg = data.answer.startsWith("Error") || data.answer.startsWith("The textbook for");
+          var isErrorMsg = data.isError || data.answer.startsWith("Error") || data.answer.startsWith("AI Server") || data.answer.startsWith("Could not access") || data.answer.startsWith("The textbook for");
           if (studentMode === "HOMEWORK" && !isErrorMsg) {
             window.exportStore[loadingId] = Object.assign({ type: "HOMEWORK", rawText: data.answer }, metaInfo);
             var pdfBtn = document.createElement('button');
@@ -375,7 +373,7 @@
       }
 
       // ==========================================
-      // PDF GENERATOR FOR QUIZ & HOME WORK
+      // PDF GENERATOR WITH GUARANTEED EVERY-PAGE FOOTER
       // ==========================================
       function downloadPDF(elementId) {
         var item = window.exportStore[elementId];
@@ -428,24 +426,42 @@
             </div>
 
             ${contentHtml}
-
-            <div class="pdf-footer">
-              Developed by Rajesh Kouluri, National Teachers' Awardee 2026 &nbsp;|&nbsp; www.rajclassroom.com
-            </div>
           </div>
         `;
 
         var cleanFileName = `Class${item.studentClass}_${item.studentSubject}_${item.studentLesson.replace(/\s+/g, '')}_${item.type}.pdf`;
 
         var opt = {
-          margin:       [8, 8, 8, 8],
+          margin:       [10, 10, 18, 10], // Reserves 18mm at the bottom of every page for the footer
           filename:     cleanFileName,
           image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { scale: 2, useCORS: true },
+          html2canvas:  { scale: 2, useCORS: true, windowWidth: 800 },
+          pagebreak:    { mode: ['css', 'legacy'] },
           jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
 
-        html2pdf().set(opt).from(wrapper).save();
+        html2pdf().set(opt).from(wrapper).toPdf().get('pdf').then(function (pdf) {
+          var totalPages = pdf.internal.getNumberOfPages();
+          var pageWidth = pdf.internal.pageSize.getWidth();
+          var pageHeight = pdf.internal.pageSize.getHeight();
+
+          for (var i = 1; i <= totalPages; i++) {
+            pdf.setPage(i);
+            pdf.setDrawColor(7, 94, 84);
+            pdf.setLineWidth(0.5);
+            pdf.line(10, pageHeight - 14, pageWidth - 10, pageHeight - 14);
+
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(9.5);
+            pdf.setTextColor(7, 94, 84);
+            pdf.text(
+              "Developed by Rajesh Kouluri, National Teachers' Awardee 2026  |  www.rajclassroom.com",
+              pageWidth / 2,
+              pageHeight - 8.5,
+              { align: 'center' }
+            );
+          }
+        }).save();
       }
     </script>
   </body>
