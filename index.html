@@ -225,6 +225,10 @@
         const names = { "MATHS": "Mathematics", "ENGLISH": "English", "TELUGU": "Telugu", "EVS": "EVS" };
         return names[code] || code;
       }
+
+      function formatLessonLabel(code) {
+        return code.replace('LESSON_', 'Lesson ');
+      }
       
       function sendMessage() {
         var input = document.getElementById('user-input');
@@ -255,11 +259,14 @@
         })
         .then(response => response.json())
         .then(data => {
+          var formattedLesson = formatLessonLabel(studentLesson);
+          var pdfLessonTitle = (data.lessonName && data.lessonName.trim()) ? data.lessonName.trim() : formattedLesson;
+
           var metaInfo = {
             studentClass: studentClass,
             studentSubject: formatSubjectName(studentSubject),
-            studentLesson: studentLesson.replace('_', ' '),
-            topic: text
+            studentLesson: formattedLesson,
+            topic: pdfLessonTitle
           };
 
           try {
@@ -275,8 +282,9 @@
           var msgDiv = document.getElementById(loadingId);
           msgDiv.innerHTML = formatText(data.answer);
 
-          // If in Home Work mode, store data and append the Download PDF button
-          if (studentMode === "HOMEWORK") {
+          // Only show PDF download button in Home Work mode when valid content is returned
+          var isErrorMsg = data.answer.startsWith("Error") || data.answer.startsWith("The textbook for");
+          if (studentMode === "HOMEWORK" && !isErrorMsg) {
             window.exportStore[loadingId] = Object.assign({ type: "HOMEWORK", rawText: data.answer }, metaInfo);
             var pdfBtn = document.createElement('button');
             pdfBtn.className = 'pdf-btn';
